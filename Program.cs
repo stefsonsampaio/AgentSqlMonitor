@@ -1,10 +1,9 @@
 ﻿using AgentSqlMonitor;
 using System;
-using System.Data.SqlClient;
 
 class Program
 {
-    static void Main(string[] args)
+    static async Task Main(string[] args)
     {
         string iniFilePath = @"C:\TESTE.INI";
         var iniFileReader = new IniFileReader(iniFilePath);
@@ -15,37 +14,20 @@ class Program
         Console.WriteLine($"Server Name: {serverName}");
         Console.WriteLine($"Database Name: {databaseName}");
 
-        // Conectar ao banco de dados e executar a consulta
         string connectionString = $"Server={serverName};Database={databaseName};Trusted_Connection=True;";
-        using (SqlConnection connection = new SqlConnection(connectionString))
+        var databaseService = new DatabaseService(connectionString);
+
+        try
         {
-            connection.Open();
-            Console.WriteLine("Connection successful.");
+            ServerInfo serverInfo = databaseService.GetServerInfo();
 
-            string query = "SELECT * FROM monitoredServer";
-            SqlCommand command = new SqlCommand(query, connection);
-
-            using (SqlDataReader reader = command.ExecuteReader())
-            {
-                if (reader.HasRows)
-                {
-                    while (reader.Read())
-                    {
-                        int serverId = reader.GetInt32(0);
-                        string serverNameDb = reader.GetString(1);
-                        DateTime createdAt = reader.GetDateTime(2);
-
-                        Console.WriteLine($"ServerId: {serverId}  ServerName: {serverNameDb}  CreatedAt: {createdAt}");
-                    }
-                }
-                else
-                {
-                    Console.WriteLine("No rows found.");
-                }
-            }
-
-            connection.Close();
-            Console.WriteLine("Connection closed.");
+            // Enviar as informações para a API
+            var apiClient = new ApiClient();
+            await apiClient.SendServerInfoAsync(serverInfo);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred: {ex.Message}");
         }
     }
 }
